@@ -20,10 +20,8 @@ public class TodoController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetTodos()
     {
-        var todos = await _context.Database
-            .SqlQueryRaw<TodoItem>("SELECT Id, Task, IsCompleted FROM Todos")
-            .ToListAsync();
-
+        // Use DbSet<T> instead of Database.SqlQueryRaw
+        var todos = await _context.Todos.ToListAsync();
         return Ok(todos);
     }
 
@@ -36,15 +34,9 @@ public class TodoController : ControllerBase
             return BadRequest("Task cannot be empty.");
         }
 
-        var newId = await _context.Database
-            .SqlQueryRaw<int>(
-                "INSERT INTO Todos (Task, IsCompleted) VALUES ({0}, {1}) RETURNING Id",
-                item.Task,
-                item.IsCompleted ? 1 : 0
-            )
-            .SingleAsync();
-
-        item.Id = newId;
+        // Add via EF Core instead of raw SQL
+        _context.Todos.Add(item);
+        await _context.SaveChangesAsync(); // Saves and auto-generates ID
 
         return CreatedAtAction(nameof(GetTodos), new { id = item.Id }, item);
     }
@@ -58,18 +50,34 @@ public class TodoController : ControllerBase
             return BadRequest("ID mismatch.");
         }
 
-        int rowsAffected = await _context.Database.ExecuteSqlRawAsync(
-            "UPDATE Todos SET Task = {0}, IsCompleted = {1} WHERE Id = {2}",
-            item.Task,
-            item.IsCompleted ? 1 : 0,
-            item.Id
-        );
-
-        if (rowsAffected == 0)
+        var existing = await _context.Todos.FindAsync(id);
+        if (existing == null)
         {
             return NotFound();
         }
 
+
+
+        // Update fields
+        existing.Task = item.Task;
+        existing.IsCompleted = item.IsCompleted;
+
+        await _context.SaveChangesAsync();
+
         return NoContent();
+    }
+
+    // DELETE: api/todo/5
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteTodoItem(int id)
+    {
+        int rowsAffected = await _context.Database.ExecuteSqlRawAsync(
+            "DELETE FROM Todos WHERE Id = {0}", id
+        );
+
+        if (rowsAffected == 0)
+            return NotFound();
+
+        return NoContent(); // 204
     }
 }
