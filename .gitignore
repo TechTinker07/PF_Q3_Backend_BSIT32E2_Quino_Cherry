@@ -1,0 +1,30 @@
+# Build results
+bin/
+obj/
+*.exe
+*.dll
+*.pdb
+*.app
+
+# User-specific files
+*.user
+*.suo
+*.userprefs
+
+# Visual Studio temporary files
+.vs/
+*.vcxproj.user
+
+# Rider / VS Code
+.idea/
+.vscode/
+
+# NuGet
+*.nupkg
+packages/
+
+# Logs
+*.log
+
+# Publish folders
+publish/
